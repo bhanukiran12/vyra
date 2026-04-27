@@ -10,13 +10,13 @@ COPY frontend/package*.json ./
 COPY frontend/yarn.lock ./
 
 # Install dependencies
-RUN npm install
+RUN yarn install --frozen-lockfile
 
 # Copy source code
 COPY frontend/ ./
 
 # Build the app
-RUN npm run build
+RUN yarn build
 
 # Stage 2: Setup the backend
 FROM python:3.11-slim
