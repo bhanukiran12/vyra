@@ -1,0 +1,127 @@
+{
+  "theme_and_archetype": {
+    "theme": "DARK",
+    "archetype": "Electric & Neon combined with Organic/Earthy Stone",
+    "description": "Neon Shamanism - A fusion of ancient tribal/sacred geometry with cyberpunk/neon futurism. Deep, textured obsidian and void backgrounds accented by high-contrast neon glowing lines (red, electric blue, green, yellow). Uses layered elevations, glassmorphism, and soft glows rather than heavy drop shadows."
+  },
+  "typography": {
+    "heading_font": "Unbounded",
+    "body_font": "Chivo",
+    "fallback_fonts": "Outfit for headings, JetBrains Mono for technical data/numbers",
+    "rules": [
+      "CRITICAL: Do not use Inter, Roboto, Arial, or Space Grotesk.",
+      "Headlines (Unbounded) MUST use tight letter spacing: `tracking-tight`.",
+      "Overlines/Labels (Chivo) MUST be Uppercase + Tiny + Wide Spacing (`tracking-[0.2em]`).",
+      "Line Height: Tight (`leading-none`) for headers, loose (`leading-relaxed`) for body.",
+      "Variable Fonts: Utilize font weights creatively (e.g., Ultra-light vs Black) for contrast."
+    ]
+  },
+  "color_system": {
+    "backgrounds": {
+      "base": "#050505",
+      "surface_1": "#121212",
+      "surface_2": "#1A1A1A"
+    },
+    "accents": {
+      "tiger_primary": "#FF3366",
+      "tiger_glow": "rgba(255, 51, 102, 0.6)",
+      "goat_primary": "#00E5FF",
+      "goat_glow": "rgba(0, 229, 255, 0.6)",
+      "valid_move_neon": "#39FF14",
+      "selected_yellow": "#FFD700"
+    },
+    "text": {
+      "primary": "#F5F5F5",
+      "secondary": "#A3A3A3",
+      "muted": "#525252"
+    },
+    "rules": [
+      "Never use pure black (#000000). Always use tinted void black (#050505).",
+      "CRITICAL: Avoid purple/violet gradients entirely.",
+      "Surfaces must use a 1px border (`border-[#333333]`) to separate them from the background, avoiding muddy gray transparency.",
+      "Ensure all text meets minimum 4.5:1 contrast ratio against dark backgrounds."
+    ]
+  },
+  "layout_strategy": {
+    "grid_system": "The 'Control Room' Grid blended with heavy asymmetry for non-game screens.",
+    "spacing_scale": "Generous Spacing (p-6, p-8, p-12) mixed with dense technical data blocks.",
+    "page_specifics": {
+      "game_screen": "Strict grid hierarchy. Left Panel (Stats: col-span-2), Center (SVG Board: col-span-7), Right Panel (Abilities: col-span-3). Bottom (Actions). Total 12 cols.",
+      "home_lobby": "Bento Grid layout. Overlapping abstract geometry. Hero section spans full width, Lobby creation card spans 4 cols."
+    },
+    "rules": [
+      "Avoid centered-equal-spacing AI-slop layouts. Use heavy asymmetry.",
+      "Mobile-first responsive grids.",
+      "Use subgrid where necessary to align inner elements perfectly."
+    ]
+  },
+  "game_board_svg_guidelines": {
+    "canvas": "Dark translucent background, `backdrop-blur-xl bg-[#050505]/60`.",
+    "lines": "Neon grid style. Stroke color `#333333`, stroke width `2px`. Winning paths or active lines pulse with `cyan` or `red`.",
+    "nodes": {
+      "radius": "12px for empty nodes",
+      "fill": "#121212",
+      "stroke": "#00E5FF",
+      "stroke_width": "2px",
+      "opacity": "0.3"
+    },
+    "pieces": {
+      "tiger": "Radius 18px. Fill `#121212`. Stroke `#FF3366` 3px. Outer glow `drop-shadow(0 0 8px rgba(255,51,102,0.8))`.",
+      "goat": "Radius 14px. Fill `#121212`. Stroke `#00E5FF` 2px. Outer glow `drop-shadow(0 0 6px rgba(0,229,255,0.8))`."
+    },
+    "states": {
+      "selected": "Add `stroke: #FFD700` and `drop-shadow(0 0 12px rgba(255,215,0,0.8))`.",
+      "valid_move": "Node radius 10px, Fill `#39FF14`, opacity 0.6. Pulsing animation."
+    }
+  },
+  "animation_timings": {
+    "piece_movement": "Spring physics or `ease-out`, duration 400ms. Keep it snappy.",
+    "capture_fade": "Opacity fade out with a slight upward translate, duration 300ms.",
+    "ability_pulse": "Keyframe animation scaling from 1 to 1.3 and back, duration 600ms, repeat 2 times.",
+    "turn_indicator": "Continuous slow pulse (duration 2000ms, infinite) on the active player's avatar."
+  },
+  "component_usage_map": {
+    "Button": "Neon aesthetic. Primary buttons use dark background with 1px solid accent color (e.g. Electric Blue) and glowing box-shadow on hover. Avoid flat filled colored buttons.",
+    "Dialog": "For Room Code entry. Glassmorphism `backdrop-blur-2xl bg-[#050505]/80`. 1px border `#333333`.",
+    "Tabs": "For Lobby (Create vs Join). Minimalist tab trigger, underline active state instead of filled background. Use accent color (Neon Green or Electric Blue) for active state.",
+    "Card": "For Leaderboard and Profile stats. 1px border, dark flat background, no soft drop shadows. Sharp or slightly rounded (max 8px) corners.",
+    "Avatar": "Glowing border based on team (Red for tiger, Blue for goat).",
+    "Input": "Terminal/Cyberpunk style. Transparent background, border bottom only, or 1px border all around. Focus state rings neon cyan.",
+    "Sonner": "Dark mode forced. Border left colored with the event type (Red for capture, Yellow for ability, Green for win)."
+  },
+  "testing_attributes": {
+    "rule": "All interactive and key informational elements MUST include a `data-testid` attribute.",
+    "format": "kebab-case, role-based",
+    "examples": [
+      "data-testid=\"room-create-button\"",
+      "data-testid=\"board-node-15\"",
+      "data-testid=\"ability-pounce\""
+    ]
+  },
+  "image_keywords": [
+    "tribal patterns",
+    "constellations",
+    "ancient stone textures",
+    "neon sacred geometry",
+    "cyberpunk hud elements",
+    "dark obsidian",
+    "glowing runes"
+  ],
+  "image_urls": [
+    {
+      "url": "https://images.unsplash.com/photo-1765213186469-727cd0f08c23?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwxfHxkYXJrJTIwbmVvbiUyMGFic3RyYWN0JTIwZ2VvbWV0cnl8ZW58MHx8fHwxNzc3MjgzMzg4fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Dark alleyway with glowing circle at night (Hero Background for Home/Lobby)",
+      "category": "hero_bg"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1747696766706-5485b39bf358?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGRhcmslMjBzdG9uZSUyMHRleHR1cmV8ZW58MHx8fHwxNzc3MjgzMzgzfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Black marble with white veins (Profile / Leaderboard background texture)",
+      "category": "texture_bg"
+    },
+    {
+      "url": "https://images.pexels.com/photos/8108685/pexels-photo-8108685.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Abstract geometric shapes formed by neon strip lights in dark setting (Card / Lobby decorative image)",
+      "category": "decorative"
+    }
+  ]
+}
