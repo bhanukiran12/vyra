@@ -10,6 +10,7 @@ import os
 
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
 from db import init_db, close_db, get_db
@@ -35,6 +36,8 @@ app.include_router(game_router)
 app.include_router(wallet_router)
 app.include_router(store_router)
 app.include_router(matchmaking_router)
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 
 @app.get("/api/")
