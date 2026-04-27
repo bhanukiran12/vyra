@@ -30,6 +30,37 @@ The CRA dev server proxies `/api/*` (HTTP + WebSocket) to the backend via
 falls back to `window.location.origin`, which makes the same code work in dev,
 preview, and production.
 
+## Economy & payments (Razorpay)
+
+Vyra has an in-game coin economy backed by Razorpay USD top-ups. There is **no**
+direct cash betting — players exchange USD for coins, then stake coins on
+matches. Real-money flow:
+
+1. Frontend asks `POST /api/wallet/order` with a `package_id`. Backend creates a
+   Razorpay Order (currency `USD`) and persists it in `orders` (`status:created`).
+2. `frontend/src/lib/razorpay.js` opens the Razorpay Checkout modal.
+3. On success the modal returns `razorpay_order_id`, `razorpay_payment_id`,
+   `razorpay_signature`. Frontend posts them to `POST /api/wallet/verify`.
+4. Backend recomputes `HMAC_SHA256(order_id|payment_id, KEY_SECRET)` and only
+   credits coins if signatures match. The `orders` row is atomically flipped
+   `created → paid` so credit is exactly-once even if both the verify call and
+   the webhook (`POST /api/wallet/webhook`) fire.
+
+Coin packages: `$1→100`, `$5→550`, `$10→1200`, `$20→2600` (defined in
+`backend/economy.py`). Match entry fees: `[0,10,25,50,100,250]`. Pot games pay
+the winner `pot − 10%` (no consolation). Casual matches pay +100/+20.
+
+Mongo collections added: `orders`, `transactions`, `inventory`. All have unique
+indexes (`order_id` for orders, `(user_id,item_id)` for inventory) to keep the
+flow idempotent.
+
+Frontend pages:
+
+- `/wallet` — balance + transaction ledger + Add coins modal
+- `/store` — skins & maps purchasable in coins or direct USD
+- TopBar shows the live coin balance with a `+` button that opens the top-up
+  modal from anywhere.
+
 ## Environment variables
 
 Configured in `backend/.env`:
@@ -38,6 +69,12 @@ Configured in `backend/.env`:
 - `DB_NAME` — Database name (`vyra`)
 - `JWT_SECRET` — HS256 secret used to sign auth tokens
 - `CORS_ORIGINS` — Comma-separated allow-list (`*` in dev)
+
+Secrets (Replit Secrets pane):
+
+- `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` — required for top-ups & store USD
+- `RAZORPAY_WEBHOOK_SECRET` — optional; if set, `/api/wallet/webhook` rejects
+  payloads with bad HMAC signatures
 
 Configured in `frontend/.env`:
 

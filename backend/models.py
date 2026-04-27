@@ -36,6 +36,7 @@ class UserPublic(BaseModel):
 
 class CreateRoomInput(BaseModel):
     side: str = Field(pattern="^(tiger|goat)$")
+    entry_fee: int = Field(default=0, ge=0, le=1000)
 
 
 class JoinRoomInput(BaseModel):
@@ -51,3 +52,23 @@ class MatchHistoryItem(BaseModel):
     coins_delta: int
     rating_delta: int
     created_at: datetime
+
+
+# Wallet / payments
+class CreateOrderInput(BaseModel):
+    package_id: str = Field(min_length=1, max_length=64)
+
+
+class VerifyPaymentInput(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
+
+# Store
+class StorePurchaseInput(BaseModel):
+    item_id: str = Field(min_length=1, max_length=64)
+
+
+class StoreOrderInput(BaseModel):
+    item_id: str = Field(min_length=1, max_length=64)

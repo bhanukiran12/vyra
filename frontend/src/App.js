@@ -12,6 +12,8 @@ import Lobby from "./pages/Lobby";
 import GameRoom from "./pages/GameRoom";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
+import Wallet from "./pages/Wallet";
+import Store from "./pages/Store";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -90,6 +92,22 @@ function Shell() {
           element={
             <Protected>
               <Profile />
+            </Protected>
+          }
+        />
+        <Route
+          path="/wallet"
+          element={
+            <Protected>
+              <Wallet />
+            </Protected>
+          }
+        />
+        <Route
+          path="/store"
+          element={
+            <Protected>
+              <Store />
             </Protected>
           }
         />

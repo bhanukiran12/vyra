@@ -4,10 +4,12 @@ import { api, formatApiError } from "../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Copy, Swords, Trophy, Users } from "lucide-react";
+import { Coins, Copy, Swords, Trophy, Users, Sparkles } from "lucide-react";
+
+const ENTRY_FEES = [0, 10, 25, 50, 100, 250];
 
 export default function Lobby() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const nav = useNavigate();
   const [side, setSide] = useState("tiger");
   const [code, setCode] = useState("");
@@ -15,6 +17,7 @@ export default function Lobby() {
   const [busy, setBusy] = useState(false);
   const [leaders, setLeaders] = useState([]);
   const [createdCode, setCreatedCode] = useState(null);
+  const [entryFee, setEntryFee] = useState(0);
 
   useEffect(() => {
     api
@@ -26,9 +29,17 @@ export default function Lobby() {
   const createRoom = async () => {
     setBusy(true);
     try {
-      const { data } = await api.post("/rooms/create", { side });
+      const { data } = await api.post("/rooms/create", {
+        side,
+        entry_fee: entryFee,
+      });
       setCreatedCode(data.code);
-      toast.success(`Room ${data.code} created — share the code!`);
+      await refreshUser();
+      toast.success(
+        entryFee > 0
+          ? `Room ${data.code} · ${entryFee} coins staked`
+          : `Room ${data.code} created — share the code!`,
+      );
     } catch (e) {
       toast.error(formatApiError(e));
     } finally {
@@ -44,6 +55,7 @@ export default function Lobby() {
         code,
         side: joinSide || undefined,
       });
+      await refreshUser();
       nav(`/game/${data.code}`);
     } catch (e) {
       toast.error(formatApiError(e));
@@ -135,13 +147,72 @@ export default function Lobby() {
             </div>
           </div>
 
+          {/* Entry fee */}
+          <div className="mt-6">
+            <div className="flex items-center justify-between">
+              <div className="overline">entry fee (each player)</div>
+              <span className="text-[10px] text-neutral-500">
+                winner takes pot · 10% platform fee
+              </span>
+            </div>
+            <div
+              className="mt-2 flex flex-wrap gap-2"
+              data-testid="entry-fee-picker"
+            >
+              {ENTRY_FEES.map((f) => {
+                const insufficient = (user?.coins ?? 0) < f;
+                const active = entryFee === f;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setEntryFee(f)}
+                    disabled={insufficient}
+                    data-testid={`entry-fee-${f}`}
+                    className="flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-mono-tech transition disabled:opacity-40"
+                    style={{
+                      borderColor: active ? "#ffd700" : "#2a2a2a",
+                      color: active ? "#ffd700" : "#a3a3a3",
+                      background: active ? "rgba(255,215,0,0.08)" : "transparent",
+                    }}
+                  >
+                    {f === 0 ? (
+                      "Casual"
+                    ) : (
+                      <>
+                        {f} <Coins className="h-3 w-3" />
+                      </>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {entryFee > 0 && (
+              <div
+                className="mt-2 flex items-center justify-between rounded-md border border-[#ffd700]/30 bg-[#ffd700]/5 p-2 text-[11px] text-neutral-300"
+                data-testid="entry-fee-summary"
+              >
+                <span className="flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-[#ffd700]" />
+                  Pot {entryFee * 2} · winner takes{" "}
+                  <span className="text-[#39ff14]">
+                    {entryFee * 2 - Math.floor((entryFee * 2) * 0.1)}
+                  </span>
+                </span>
+                <span className="text-neutral-500">
+                  fee {Math.floor((entryFee * 2) * 0.1)}c
+                </span>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={createRoom}
             disabled={busy}
             data-testid="create-room-button"
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-md border border-[#ff3366] px-4 py-3 font-head uppercase tracking-[0.2em] text-[#ff3366] transition hover:bg-[#ff3366]/10 disabled:opacity-60"
           >
-            <Swords className="h-4 w-4" /> Generate code
+            <Swords className="h-4 w-4" />{" "}
+            {entryFee > 0 ? `Stake ${entryFee} & open arena` : "Generate code"}
           </button>
 
           {createdCode && (

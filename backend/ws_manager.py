@@ -9,6 +9,8 @@ from fastapi import WebSocket, WebSocketDisconnect
 from auth import decode_token
 from db import get_db
 from game_engine import validate_and_apply_move, apply_ability
+from economy import payout_for_pot
+import uuid
 
 
 class RoomHub:
@@ -53,8 +55,18 @@ async def _finalize_match(db, room: dict, winner_side: str):
     loser_user = guest if winner_user is host else host
     winner_elo_gain = 25
     loser_elo_loss = 25
-    winner_coins = 100
-    loser_coins = 20
+
+    pot = int(room.get("pot", 0))
+    if pot > 0:
+        split = payout_for_pot(pot)
+        winner_coins = split["winner"]
+        loser_coins = 0
+        platform_fee = split["platform"]
+    else:
+        # Casual match — house bonus
+        winner_coins = 100
+        loser_coins = 20
+        platform_fee = 0
     now = datetime.now(timezone.utc).isoformat()
 
     await db.users.update_one(
@@ -65,6 +77,49 @@ async def _finalize_match(db, room: dict, winner_side: str):
         {"id": loser_user["id"]},
         {"$inc": {"coins": loser_coins, "rating": -loser_elo_loss, "losses": 1}},
     )
+    if pot > 0:
+        await db.transactions.insert_one(
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": winner_user["id"],
+                "kind": "match_win",
+                "delta": winner_coins,
+                "currency": "coins",
+                "room_code": room["code"],
+                "pot": pot,
+                "platform_fee": platform_fee,
+                "status": "completed",
+                "description": f"Match win · pot {pot} (fee {platform_fee})",
+                "created_at": now,
+            }
+        )
+    else:
+        await db.transactions.insert_one(
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": winner_user["id"],
+                "kind": "match_win",
+                "delta": winner_coins,
+                "currency": "coins",
+                "room_code": room["code"],
+                "status": "completed",
+                "description": f"Match win · room {room['code']}",
+                "created_at": now,
+            }
+        )
+        await db.transactions.insert_one(
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": loser_user["id"],
+                "kind": "match_loss",
+                "delta": loser_coins,
+                "currency": "coins",
+                "room_code": room["code"],
+                "status": "completed",
+                "description": f"Consolation · room {room['code']}",
+                "created_at": now,
+            }
+        )
     await db.matches.insert_many(
         [
             {

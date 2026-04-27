@@ -10,6 +10,8 @@ from db import get_db
 from models import CreateRoomInput, JoinRoomInput
 from game_engine import new_game
 from board import NODES, ADJACENCY
+from economy import ALLOWED_ENTRY_FEES, payout_for_pot
+import uuid as _uuid
 
 router = APIRouter(prefix="/api", tags=["game"])
 
@@ -27,6 +29,8 @@ def _public_room(room: dict) -> dict:
         "status": room["status"],
         "created_at": room["created_at"],
         "winner": room.get("winner"),
+        "entry_fee": room.get("entry_fee", 0),
+        "pot": room.get("pot", 0),
     }
 
 
@@ -42,13 +46,30 @@ async def get_board():
 @router.post("/rooms/create")
 async def create_room(payload: CreateRoomInput, current_user: dict = Depends(get_current_user)):
     db = get_db()
+    entry_fee = int(payload.entry_fee or 0)
+    if entry_fee not in ALLOWED_ENTRY_FEES:
+        raise HTTPException(status_code=400, detail="Invalid entry fee")
+    if entry_fee > 0:
+        # Atomic deduct host's stake
+        res = await db.users.update_one(
+            {"id": current_user["id"], "coins": {"$gte": entry_fee}},
+            {"$inc": {"coins": -entry_fee}},
+        )
+        if res.modified_count == 0:
+            raise HTTPException(status_code=400, detail="Not enough coins for entry fee")
     # Generate unique code
     for _ in range(6):
         code = _room_code()
         if not await db.rooms.find_one({"code": code}):
             break
     else:
+        if entry_fee > 0:
+            await db.users.update_one(
+                {"id": current_user["id"]}, {"$inc": {"coins": entry_fee}}
+            )
         raise HTTPException(status_code=500, detail="Could not generate room code")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
     room = {
         "code": code,
         "host": {
@@ -60,10 +81,27 @@ async def create_room(payload: CreateRoomInput, current_user: dict = Depends(get
         "host_side": payload.side,
         "status": "waiting",  # waiting | active | finished
         "state": new_game(),
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": now_iso,
         "winner": None,
+        "entry_fee": entry_fee,
+        "pot": entry_fee,
+        "stakers": [current_user["id"]] if entry_fee > 0 else [],
     }
     await db.rooms.insert_one(room)
+    if entry_fee > 0:
+        await db.transactions.insert_one(
+            {
+                "id": str(_uuid.uuid4()),
+                "user_id": current_user["id"],
+                "kind": "entry_fee",
+                "delta": -entry_fee,
+                "currency": "coins",
+                "room_code": code,
+                "status": "completed",
+                "description": f"Entry fee · room {code}",
+                "created_at": now_iso,
+            }
+        )
     return _public_room(room)
 
 
@@ -89,7 +127,40 @@ async def join_room(payload: JoinRoomInput, current_user: dict = Depends(get_cur
     update = {"guest": guest}
     if room["status"] == "waiting":
         update["status"] = "active"
-    await db.rooms.update_one({"code": code}, {"$set": update})
+
+    entry_fee = int(room.get("entry_fee", 0))
+    if entry_fee > 0 and current_user["id"] not in room.get("stakers", []):
+        res = await db.users.update_one(
+            {"id": current_user["id"], "coins": {"$gte": entry_fee}},
+            {"$inc": {"coins": -entry_fee}},
+        )
+        if res.modified_count == 0:
+            raise HTTPException(status_code=400, detail="Not enough coins for entry fee")
+        await db.rooms.update_one(
+            {"code": code},
+            {
+                "$set": update,
+                "$inc": {"pot": entry_fee},
+                "$addToSet": {"stakers": current_user["id"]},
+            },
+        )
+        await db.transactions.insert_one(
+            {
+                "id": str(_uuid.uuid4()),
+                "user_id": current_user["id"],
+                "kind": "entry_fee",
+                "delta": -entry_fee,
+                "currency": "coins",
+                "room_code": code,
+                "status": "completed",
+                "description": f"Entry fee · room {code}",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        room["pot"] = room.get("pot", 0) + entry_fee
+        room.setdefault("stakers", []).append(current_user["id"])
+    else:
+        await db.rooms.update_one({"code": code}, {"$set": update})
     room.update(update)
     return _public_room(room)
 
@@ -137,15 +208,19 @@ async def leaderboard(limit: int = 20):
 
 @router.get("/profile")
 async def profile(current_user: dict = Depends(get_current_user)):
+    db = get_db()
+    fresh = await db.users.find_one(
+        {"id": current_user["id"]}, {"_id": 0, "password_hash": 0}
+    ) or current_user
     return {
         "user": {
-            "id": current_user["id"],
-            "email": current_user["email"],
-            "username": current_user["username"],
-            "coins": current_user.get("coins", 0),
-            "rating": current_user.get("rating", 1000),
-            "wins": current_user.get("wins", 0),
-            "losses": current_user.get("losses", 0),
+            "id": fresh["id"],
+            "email": fresh["email"],
+            "username": fresh["username"],
+            "coins": fresh.get("coins", 0),
+            "rating": fresh.get("rating", 1000),
+            "wins": fresh.get("wins", 0),
+            "losses": fresh.get("losses", 0),
         }
     }
 
