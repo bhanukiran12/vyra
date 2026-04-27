@@ -51,11 +51,27 @@ def new_game():
             "goat": {"fortify": 0, "decoy": 0},
         },
         "frozen_nodes": [],
+        "frozen_until": None,
         "fortified_nodes": [],
+        "fortified_until": None,
         "decoy_node": None,
+        "decoy_until": None,
         "turn_number": 1,
         "winner": None,
     }
+
+
+def _clear_expired_effects(state):
+    tn = state["turn_number"]
+    if state.get("decoy_until") is not None and tn > state["decoy_until"]:
+        state["decoy_node"] = None
+        state["decoy_until"] = None
+    if state.get("frozen_until") is not None and tn > state["frozen_until"]:
+        state["frozen_nodes"] = []
+        state["frozen_until"] = None
+    if state.get("fortified_until") is not None and tn > state["fortified_until"]:
+        state["fortified_nodes"] = []
+        state["fortified_until"] = None
 
 
 # ------- Queries -------
@@ -153,12 +169,8 @@ def check_win(state):
 # ------- Actions -------
 
 def _advance_turn(state):
-    """Switch turn, clear single-turn effects, decrement cooldowns."""
-    # Clear single-turn effects now that the opponent is about to play
-    state["frozen_nodes"] = []
-    state["fortified_nodes"] = []
-    state["decoy_node"] = None
-
+    """Switch turn and decrement cooldowns. Expired single-turn effects are
+    cleared lazily via _clear_expired_effects at the start of the next action."""
     # Switch turn
     state["turn"] = "tiger" if state["turn"] == "goat" else "goat"
     state["turn_number"] += 1
@@ -186,6 +198,7 @@ def validate_and_apply_move(state, player, from_id, to_id):
     Returns (ok, message, events).
     Events is a list of dicts for the client (e.g., capture event).
     """
+    _clear_expired_effects(state)
     if state["phase"] == "finished":
         return False, "Game is over", []
     if state["turn"] != player:
@@ -309,8 +322,6 @@ def apply_ability(state, player, ability, payload):
         b[land] = "tiger"
         state["tiger_nodes"] = [land if n == frm else n for n in state["tiger_nodes"]]
         cds["pounce"] = 3
-        # Pounce starts cooldown next time we decrement; we add +1 to offset
-        cds["pounce"] += 1
         events.append({"type": "pounce", "from": frm, "to": land, "over": over, "captured": captured})
         _advance_turn(state)
         return True, "ok", events
@@ -329,7 +340,8 @@ def apply_ability(state, player, ability, payload):
             if tgt not in tiger_adj:
                 return False, "Goat not adjacent to any tiger", []
         state["frozen_nodes"] = list(targets)
-        cds["roar"] = 5 + 1
+        state["frozen_until"] = state["turn_number"] + 1
+        cds["roar"] = 5
         events.append({"type": "roar", "targets": list(targets)})
         _advance_turn(state)
         return True, "ok", events
@@ -345,7 +357,8 @@ def apply_ability(state, player, ability, payload):
         if not (c in ADJACENCY[a] and d in ADJACENCY[a] and d in ADJACENCY[c]):
             return False, "Not a connected triangle", []
         state["fortified_nodes"] = list(tri)
-        cds["fortify"] = 4 + 1
+        state["fortified_until"] = state["turn_number"] + 1
+        cds["fortify"] = 4
         events.append({"type": "fortify", "nodes": list(tri)})
         _advance_turn(state)
         return True, "ok", events
@@ -357,7 +370,8 @@ def apply_ability(state, player, ability, payload):
         if b[node] is not None:
             return False, "Node occupied", []
         state["decoy_node"] = node
-        cds["decoy"] = 5 + 1
+        state["decoy_until"] = state["turn_number"] + 1
+        cds["decoy"] = 5
         events.append({"type": "decoy", "node": node})
         _advance_turn(state)
         return True, "ok", events

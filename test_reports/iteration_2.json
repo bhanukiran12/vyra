@@ -1,0 +1,35 @@
+{
+  "summary": "Retest of the HIGH-priority ability-effect bug fixed by E1 (_advance_turn no longer wipes effects; new _clear_expired_effects called at top of validate_and_apply_move/apply_ability; abilities use *_until = turn_number+1 and real cooldown values). Added a new pytest module test_abilities_unit.py with 13 focused tests exercising game_engine directly. All 13 new + 25 prior tests pass = 38/38 (100%). Tiger-win finalization E2E still works through the refactored advance_turn.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "WS /api/ws/{code}", "issue": "Invalid token still closes WS with code 4401 before accept; correct behaviour but client error handling awkward (out of scope for this iteration)."},
+      {"endpoint": "server.py", "issue": "Still uses deprecated @app.on_event (out of scope this iteration)."},
+      {"endpoint": "CORS", "issue": "CORS_ORIGINS='*' + allow_credentials=True still present (out of scope)."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_abilities_unit.py",
+    "/app/backend/tests/test_rest.py",
+    "/app/backend/tests/test_websocket.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fix VERIFIED: _advance_turn now only switches turn + decrements cooldowns; _clear_expired_effects runs lazily at top of validate_and_apply_move and apply_ability, so single-turn effects survive exactly one opponent turn and expire when the setter acts again. decoy/fortify/roar now have real in-game effect.",
+    "Pounce cooldown is now exactly 3 (no +1 hack); fortify=4, roar=5, decoy=5. CD decrement on each setter's own turn correctly traces 3->2->1->0 and ability becomes reusable at 0.",
+    "Legacy room states (missing *_until keys) handled safely via state.get('decoy_until') etc. — confirmed by test_legacy_state_without_until_keys_does_not_crash.",
+    "Unrelated previously-flagged minor items (deprecated on_event, CORS wildcard, no optimistic concurrency control on room state writes, no brute-force lockout) remain as before — explicitly out of scope for this iteration per main agent."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_abilities_unit.py (new)"
+  ],
+  "success_rate": {"backend": "100% (38/38)", "frontend": "N/A (skipped per request)"},
+  "test_credentials": "Tests register fresh TEST_-prefixed users per run via /api/auth/register; no static credentials needed.",
+  "seed_data_creation": "Each pytest run creates a few TEST_-prefixed users + 1 room per test. No production data touched.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Ability-effect bug is fully fixed and covered. The new unit-level test_abilities_unit.py is the fastest regression net (no WS, no DB). For future iterations, consider also adding (a) goat-win immobilize-all-tigers e2e, (b) WS-level fortify and roar integration tests (currently only decoy has a WS smoke test), (c) tightening CORS + lifespan migration. Pounce reusable-after-CD test relies on a deterministic 3-3 oscillation between nodes 10<->6 — preserve that geometry if board.py edges change.",
+  "rca of the issue": "Previous bug RCA stands; fix verification: in apply_ability, after setting state['decoy_node']=node and state['decoy_until']=turn_number+1, _advance_turn is called. The new _advance_turn does NOT clear effects — it only switches turn (turn_number becomes turn_number+1, equal to decoy_until). On opponent's next action _clear_expired_effects runs but turn_number is NOT > decoy_until so effect persists. After opponent advances, turn_number = decoy_until+1; setter's next action triggers _clear_expired_effects which now correctly clears the effect. Symmetric for frozen_until/fortified_until. Verified end-to-end in test_decoy_persists_through_tiger_turn_and_clears_on_goat_next_action and the corresponding fortify/roar tests."
+}
