@@ -9,7 +9,7 @@ import logging
 import os
 
 from fastapi import FastAPI, Request, WebSocket
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
@@ -38,6 +38,11 @@ app.include_router(store_router)
 app.include_router(matchmaking_router)
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+
+@app.get("/{path:path}")
+async def serve_frontend(path: str):
+    return FileResponse("static/index.html")
 
 
 @app.get("/api/")

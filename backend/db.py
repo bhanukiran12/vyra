@@ -9,8 +9,12 @@ _db = None
 def init_db():
     global _client, _db
     if _client is None:
-        _client = AsyncIOMotorClient(os.environ["MONGO_URL"])
-        _db = _client[os.environ["DB_NAME"]]
+        mongo_url = os.environ.get("MONGO_URL")
+        db_name = os.environ.get("DB_NAME", "vyra")
+        if not mongo_url:
+            raise ValueError("MONGO_URL environment variable is required")
+        _client = AsyncIOMotorClient(mongo_url)
+        _db = _client[db_name]
     return _db
 
 

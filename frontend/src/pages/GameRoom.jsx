@@ -39,7 +39,9 @@ export default function GameRoom() {
 
   // Fetch static board once
   useEffect(() => {
-    api.get("/board").then((r) => setBoardMeta(r.data));
+    api.get("/board").then((r) => setBoardMeta(r.data)).catch(() => {
+      toast.error("Failed to load game board. Please refresh the page.");
+    });
   }, []);
 
   // Open websocket
@@ -69,6 +71,11 @@ export default function GameRoom() {
         }
         // reconnect with backoff
         retryRef.current += 1;
+        if (retryRef.current > 5) {
+          toast.error("Unable to connect to game server. Please try again later.");
+          nav("/lobby");
+          return;
+        }
         const delay = Math.min(5000, 500 * retryRef.current);
         setTimeout(connect, delay);
       };
