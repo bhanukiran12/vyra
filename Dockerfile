@@ -1,7 +1,7 @@
 # Multi-stage build for Vyra full-stack app
 
 # Stage 1: Build the frontend
-FROM node:18-alpine AS frontend
+FROM node:20-alpine AS frontend
 
 WORKDIR /app/frontend
 
