@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Coins, Copy, Swords, Trophy, Users, Sparkles } from "lucide-react";
+import QuickMatch from "../components/lobby/QuickMatch";
 
 const ENTRY_FEES = [0, 10, 25, 50, 100, 250];
 
@@ -89,6 +90,10 @@ export default function Lobby() {
           you&apos;ve received. Every match shifts your rating and earns coin.
         </p>
       </motion.div>
+
+      <div className="mb-6">
+        <QuickMatch />
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Create room */}

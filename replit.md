@@ -61,6 +61,22 @@ Frontend pages:
 - TopBar shows the live coin balance with a `+` button that opens the top-up
   modal from anywhere.
 
+## Quick Match (matchmaking queue)
+
+`backend/matchmaking.py` exposes a long-polled queue keyed by `(entry_fee)`:
+
+- `POST /api/matchmaking/queue {entry_fee, side?}` — deducts the stake (if
+  any) and waits up to 25 s inside the request. The second arrival creates the
+  room synchronously and resolves the first waiter's future. On timeout the
+  client re-polls; the same waiter slot is reused.
+- `POST /api/matchmaking/cancel` — leaves the queue and refunds the stake.
+- `GET /api/matchmaking/status` — current queue state for the caller.
+
+Stale waiters (no re-poll for >90 s) are auto-evicted and refunded. The
+`QuickMatch` card in `frontend/src/components/lobby/QuickMatch.jsx` drives the
+UI: tier picker, side preference, Searching indicator with elapsed timer, and a
+Cancel button.
+
 ## Environment variables
 
 Configured in `backend/.env`:

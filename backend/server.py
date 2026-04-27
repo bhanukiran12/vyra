@@ -17,6 +17,7 @@ from routes_auth import router as auth_router
 from routes_game import router as game_router
 from routes_wallet import router as wallet_router, handle_webhook as wallet_webhook
 from routes_store import router as store_router
+from matchmaking import router as matchmaking_router
 from ws_manager import handle_socket
 
 app = FastAPI(title="Vyra API")
@@ -33,6 +34,7 @@ app.include_router(auth_router)
 app.include_router(game_router)
 app.include_router(wallet_router)
 app.include_router(store_router)
+app.include_router(matchmaking_router)
 
 
 @app.get("/api/")
