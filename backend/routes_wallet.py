@@ -12,10 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from auth import get_current_user
 from db import get_db
 from economy import COIN_PACKAGES, get_package
-from models import CreateOrderInput, VerifyPaymentInput, WithdrawalInput
-
-WITHDRAWAL_RATE = 100  # coins per USD (mirrors the buy rate)
-MIN_WITHDRAWAL_COINS = 250  # min payout = $2.50
+from models import CreateOrderInput, VerifyPaymentInput
 
 log = logging.getLogger("vyra.wallet")
 router = APIRouter(prefix="/api/wallet", tags=["wallet"])
@@ -173,88 +170,6 @@ async def _credit_topup(db, order_doc: dict, payment_id: str):
     return await db.orders.find_one(
         {"order_id": order_doc["order_id"]}, {"_id": 0}
     )
-
-
-@router.get("/withdrawals")
-async def list_withdrawals(current_user: dict = Depends(get_current_user)):
-    db = get_db()
-    cursor = (
-        db.withdrawals.find({"user_id": current_user["id"]}, {"_id": 0})
-        .sort("created_at", -1)
-        .limit(50)
-    )
-    items = []
-    async for w in cursor:
-        items.append(w)
-    return {
-        "withdrawals": items,
-        "min_coins": MIN_WITHDRAWAL_COINS,
-        "rate": WITHDRAWAL_RATE,
-    }
-
-
-@router.post("/withdraw")
-async def withdraw(
-    payload: WithdrawalInput, current_user: dict = Depends(get_current_user)
-):
-    """Create a withdrawal request: lock the coins now, payout processed by ops."""
-    db = get_db()
-    coins = int(payload.coins)
-    if coins < MIN_WITHDRAWAL_COINS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Minimum withdrawal is {MIN_WITHDRAWAL_COINS} coins",
-        )
-    # Atomic lock — only succeed if balance is sufficient
-    res = await db.users.update_one(
-        {"id": current_user["id"], "coins": {"$gte": coins}},
-        {"$inc": {"coins": -coins}},
-    )
-    if res.modified_count == 0:
-        raise HTTPException(status_code=400, detail="Not enough coins")
-
-    usd_amount = round(coins / WITHDRAWAL_RATE, 2)
-    request_id = str(uuid.uuid4())
-    now = _now_iso()
-    await db.withdrawals.insert_one(
-        {
-            "id": request_id,
-            "user_id": current_user["id"],
-            "username": current_user.get("username"),
-            "coins": coins,
-            "usd_amount": usd_amount,
-            "method": payload.method,
-            "payout_target": payload.payout_target,
-            "holder_name": payload.holder_name,
-            "status": "pending",  # pending → processing → paid | rejected
-            "created_at": now,
-        }
-    )
-    await db.transactions.insert_one(
-        {
-            "id": str(uuid.uuid4()),
-            "user_id": current_user["id"],
-            "kind": "withdrawal",
-            "delta": -coins,
-            "currency": "coins",
-            "usd_amount": usd_amount,
-            "withdrawal_id": request_id,
-            "status": "pending",
-            "description": f"Withdrawal request · ${usd_amount:.2f} via {payload.method.upper()}",
-            "created_at": now,
-        }
-    )
-    user = await db.users.find_one(
-        {"id": current_user["id"]}, {"_id": 0, "password_hash": 0}
-    )
-    return {
-        "ok": True,
-        "request_id": request_id,
-        "coins": coins,
-        "usd_amount": usd_amount,
-        "balance": user.get("coins", 0),
-        "status": "pending",
-    }
 
 
 @router.post("/verify")
