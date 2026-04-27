@@ -1,0 +1,61 @@
+{
+  "summary": "Comprehensive backend testing of Vyra: 25 tests executed across REST + WebSocket. 24 passed (96%). All auth, room, leaderboard, profile, match-history, board endpoints verified. WebSocket auth (valid/invalid token), gameplay actions (place, move, illegal-move, not-your-turn, unknown action, ping), and full scripted tiger-win match finalization (6 captures -> gameOver -> coins/rating/match_history updates on both players) all work correctly. One real game-engine bug found: goat abilities (decoy, roar, fortify) are immediately wiped by _advance_turn on the same call that set them, so they have zero gameplay effect.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "game_engine.apply_ability (decoy/roar/fortify)",
+        "issue": "Ability effects (decoy_node, frozen_nodes, fortified_nodes) are set, then apply_ability calls _advance_turn which immediately clears those same fields. Net effect: decoy/roar/fortify consume the turn and start a cooldown but have NO in-game effect. Tiger pounce works because its state mutation is on the board array, not on the single-turn fields.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "WS /api/ws/{code}",
+        "issue": "When auth token is missing/invalid, server closes with code 4401 before accept(); this is correct but makes client-side error handling tricky (websockets lib raises InvalidStatus rather than receiving a structured error). Consider accepting then sending a typed error message before closing."
+      },
+      {
+        "endpoint": "game_engine.apply_ability (roar/fortify cooldowns)",
+        "issue": "Cooldowns for roar/fortify are set as `5 + 1` / `4 + 1` to offset the immediate decrement in _advance_turn. This is brittle; if the decrement logic changes it silently breaks. Pounce does the same with `+=1`. Recommend centralising this offset logic."
+      },
+      {
+        "endpoint": "POST /api/rooms/join",
+        "issue": "If host rejoins the room with the same code via /join, the endpoint returns the room but does not re-assert status; minor inconsistency."
+      }
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/conftest.py",
+    "/app/backend/tests/test_rest.py",
+    "/app/backend/tests/test_websocket.py",
+    "/app/backend/tests/pytest.ini",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Fix ability-effect clearing in game_engine._advance_turn: single-turn effects set THIS turn must survive through the OPPONENT's next turn and be cleared when the setter's turn comes back around (or clear at start of opponent's turn instead of end of setter's turn).",
+    "Consider recording which player set which single-turn effect, so _advance_turn only clears effects that are truly expired. Alternatively, move the clearing block to the BEGINNING of validate_and_apply_move/apply_ability (for the acting player's opponent's stale effects).",
+    "Simplify cooldown setup so each ability just sets its real cooldown value; handle the 'just set, don't decrement this advance' bookkeeping in _advance_turn via a flag."
+  ],
+  "critical_code_review_comments": [
+    "Critical bug: decoy/roar/fortify abilities have no gameplay effect due to _advance_turn clearing fields that apply_ability just set (see action_items).",
+    "server.py uses deprecated @app.on_event('startup' / 'shutdown') — migrate to FastAPI lifespan context manager (on_event is deprecated since FastAPI 0.93).",
+    "routes_game.create_room stores the full engine state inside the Mongo rooms document AND re-reads/writes it on every WS action. For longer games this is fine given the small state size (~200 bytes), but race conditions could exist if the same player opens multiple WS connections — no optimistic concurrency control via version number.",
+    "ws_manager.handle_socket auto-joins any authenticated user as guest if guest slot is empty. This contradicts the 'private rooms by code' intent since any user who knows the code can take the guest seat, and the REST /rooms/join endpoint already does this step — the duplication is fine but undocumented.",
+    "auth.get_current_user reads JWT secret via os.environ['JWT_SECRET'] without fallback; good. JWT_SECRET is set in .env correctly.",
+    "bcrypt used correctly (hash starts with $2b$, verify with bcrypt.checkpw). No brute-force lockout implemented (not in scope per problem statement, flagging for completeness).",
+    "CORS_ORIGINS='*' combined with allow_credentials=True is invalid per spec (browsers will reject); works today because no browser flow relies on cookies across origins in this app, but should be tightened to explicit origins."
+  ],
+  "updated_files": [
+    "/app/backend/tests/conftest.py (new)",
+    "/app/backend/tests/test_rest.py (new)",
+    "/app/backend/tests/test_websocket.py (new)",
+    "/app/backend/tests/pytest.ini (new)"
+  ],
+  "success_rate": {"backend": "96%", "frontend": "N/A (skipped per request)"},
+  "test_credentials": "Tests create fresh TEST_-prefixed users per run; documented seed users tiger1@vyra.game / goat1@vyra.game in /app/memory/test_credentials.md were NOT required (register-or-login fallback used).",
+  "seed_data_creation": "Each test run registers a handful of TEST_-prefixed users (unique suffix) in vyra_database.users and creates TEST rooms + 2 match-history rows per full-game test.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Full game-flow tiger-win script is in test_websocket.py::test_ws_full_game_tiger_win_finalizes and uses the scripted capture sequence [7->3/12, 11->12/10, 9->5/14, 13->14/12, 13->12/14, 9->14/5]. Full match finalization is idempotent (ws_manager._finalize_match guards on room.finalized). Goat-win (immobilize-all-tigers) was NOT scripted — significantly harder to force. Pounce ability was NOT explicitly tested via WS (would need a pounce-legal setup). Roar and fortify could not be verified because of the effect-clearing bug; a simple smoke test would only confirm the cooldown bookkeeping, not the actual effect.",
+  "rca of the issue": "game_engine.apply_ability('decoy'|'roar'|'fortify') sets state['decoy_node']|['frozen_nodes']|['fortified_nodes'] and then calls _advance_turn(state). The first three lines of _advance_turn reset those exact fields to empty/None BEFORE switching turn, wiping the just-applied effect. Reproduction: connect as goat over WS during placement phase and send {action:'ability', ability:'decoy', payload:{node:22}}. Server responds with state where decoy_node is None and cooldowns.goat.decoy is 5. Mitigation: clear single-turn effects at the START of the SETTER's next turn (i.e., when turn_number has advanced by 2 for that side), not at the end of the setter's turn. Alternative simpler fix: track effects with an 'expires_on_turn' counter and clear when turn_number > expires_on_turn at top of validate_and_apply_move / apply_ability."
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="16" time="3.989" timestamp="2026-04-27T10:25:19.706471+00:00" hostname="agent-env-3dd0af1a-7b33-413c-8ad3-d7ee9ad0ed79"><testcase classname="test_rest" name="test_health" time="0.269" /><testcase classname="test_rest" name="test_board_endpoint" time="0.132" /><testcase classname="test_rest" name="test_register_creates_user_with_initial_economy" time="0.336"><failure message="AssertionError: assert 'test_reg_ce73d377@vyra.game' == 'TEST_reg_ce73d377@vyra.game'&#10;  &#10;  - TEST_reg_ce73d377@vyra.game&#10;  ? ^^^^&#10;  + test_reg_ce73d377@vyra.game&#10;  ? ^^^^">test_rest.py:37: in test_register_creates_user_with_initial_economy
+    assert u["email"] == email
+E   AssertionError: assert 'test_reg_ce73d377@vyra.game' == 'TEST_reg_ce73d377@vyra.game'
+E     
+E     - TEST_reg_ce73d377@vyra.game
+E     ? ^^^^
+E     + test_reg_ce73d377@vyra.game
+E     ? ^^^^</failure></testcase><testcase classname="test_rest" name="test_register_duplicate_email_rejected" time="0.470" /><testcase classname="test_rest" name="test_login_success_returns_token_and_user" time="0.688"><failure message="AssertionError: assert 'test_login_f...ba8@vyra.game' == 'TEST_login_f...ba8@vyra.game'&#10;  &#10;  - TEST_login_f60dcba8@vyra.game&#10;  ? ^^^^&#10;  + test_login_f60dcba8@vyra.game&#10;  ? ^^^^">test_rest.py:65: in test_login_success_returns_token_and_user
+    assert data["user"]["email"] == email
+E   AssertionError: assert 'test_login_f...ba8@vyra.game' == 'TEST_login_f...ba8@vyra.game'
+E     
+E     - TEST_login_f60dcba8@vyra.game
+E     ? ^^^^
+E     + test_login_f60dcba8@vyra.game
+E     ? ^^^^</failure></testcase><testcase classname="test_rest" name="test_login_invalid_credentials" time="0.134" /><testcase classname="test_rest" name="test_me_requires_auth" time="0.098" /><testcase classname="test_rest" name="test_me_returns_current_user" time="0.148" /><testcase classname="test_rest" name="test_create_room_returns_6char_code" time="0.131" /><testcase classname="test_rest" name="test_join_room_sets_active_status" time="0.587" /><testcase classname="test_rest" name="test_join_nonexistent_room_returns_404" time="0.116" /><testcase classname="test_rest" name="test_get_room_returns_state" time="0.390" /><testcase classname="test_rest" name="test_leaderboard_sorted_by_rating" time="0.109" /><testcase classname="test_rest" name="test_profile_requires_auth" time="0.105" /><testcase classname="test_rest" name="test_profile_returns_user" time="0.099" /><testcase classname="test_rest" name="test_match_history_returns_list" time="0.112" /></testsuite></testsuites>
