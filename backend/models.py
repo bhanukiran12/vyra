@@ -54,15 +54,15 @@ class MatchHistoryItem(BaseModel):
     created_at: datetime
 
 
-# Wallet / payments
-class CreateOrderInput(BaseModel):
+# Wallet / payments (Stripe Checkout)
+class CheckoutInput(BaseModel):
     package_id: str = Field(min_length=1, max_length=64)
+    success_path: str = Field(default="/wallet", max_length=200)
+    cancel_path: str = Field(default="/wallet", max_length=200)
 
 
-class VerifyPaymentInput(BaseModel):
-    razorpay_order_id: str
-    razorpay_payment_id: str
-    razorpay_signature: str
+class FinalizeInput(BaseModel):
+    session_id: str = Field(min_length=4, max_length=200)
 
 
 # Store
@@ -70,13 +70,7 @@ class StorePurchaseInput(BaseModel):
     item_id: str = Field(min_length=1, max_length=64)
 
 
-class StoreOrderInput(BaseModel):
+class StoreCheckoutInput(BaseModel):
     item_id: str = Field(min_length=1, max_length=64)
-
-
-# Withdrawals
-class WithdrawalInput(BaseModel):
-    coins: int = Field(ge=250, le=1_000_000)
-    method: str = Field(pattern="^(upi|bank)$")
-    payout_target: str = Field(min_length=3, max_length=128)
-    holder_name: str = Field(min_length=2, max_length=64)
+    success_path: str = Field(default="/store", max_length=200)
+    cancel_path: str = Field(default="/store", max_length=200)
