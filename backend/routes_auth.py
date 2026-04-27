@@ -16,7 +16,7 @@ from models import LoginInput, RegisterInput
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-INITIAL_COINS = 200
+INITIAL_COINS = 0
 INITIAL_RATING = 1000
 
 

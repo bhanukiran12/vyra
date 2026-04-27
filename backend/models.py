@@ -72,3 +72,11 @@ class StorePurchaseInput(BaseModel):
 
 class StoreOrderInput(BaseModel):
     item_id: str = Field(min_length=1, max_length=64)
+
+
+# Withdrawals
+class WithdrawalInput(BaseModel):
+    coins: int = Field(ge=250, le=1_000_000)
+    method: str = Field(pattern="^(upi|bank)$")
+    payout_target: str = Field(min_length=3, max_length=128)
+    holder_name: str = Field(min_length=2, max_length=64)
