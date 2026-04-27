@@ -1,0 +1,263 @@
+You are a senior full-stack architect, game engineer, UI/UX designer, and product strategist.
+
+Build a production-grade web platform called **Vyra** — a real-time multiplayer strategy game with social features, 3D visuals, economy, and monetization.
+
+---
+
+# 🧠 IMPORTANT MODE
+
+While building:
+
+You must ALSO:
+
+1. Identify UX issues
+2. Suggest improvements
+3. Optimize flows
+4. Reduce friction
+
+For every major feature:
+
+* Explain what can be improved
+* Implement best UX practices
+
+Do NOT just build. Improve the product.
+
+---
+
+# 🏗️ TECH STACK
+
+Frontend:
+
+* React (Vite)
+* Tailwind CSS
+* Zustand
+* Three.js (3D)
+* Framer Motion
+* Socket.io client
+
+Backend:
+
+* Node.js + Express
+* Socket.io
+* JWT Auth
+
+Database:
+
+* MongoDB
+
+Payments:
+
+* Razorpay
+
+---
+
+# 🎮 CORE GAME
+
+* Goats vs Tigers strategy game
+* Graph-based board
+* Real-time multiplayer
+
+---
+
+# ⚡ ABILITIES
+
+Tigers:
+
+* Pounce
+* Roar
+
+Goats:
+
+* Fortify
+* Decoy
+
+Include:
+
+* cooldown visuals
+* animation effects
+
+---
+
+# 🎥 3D GRAPHICS
+
+* 3D board (Three.js)
+* Animated tiger & goat models
+* Movement animations
+* Ability effects (shockwave, glow, leap)
+
+---
+
+# 👥 SOCIAL SYSTEM
+
+* Search users by username
+* Add friends
+* Accept/reject requests
+* Show online/offline status
+
+---
+
+# 🎯 INVITE SYSTEM
+
+* Invite friends to match
+* Real-time notifications
+* Accept → auto join game
+
+---
+
+# 💰 ECONOMY
+
+* Wallet system
+* Coins for win/loss
+* Transaction history
+
+---
+
+# 💳 PAYMENTS
+
+* Razorpay integration
+* Add money to wallet
+* Secure flow + webhook verification
+
+---
+
+# 🛍️ STORE
+
+* Skins (tiger/goat)
+* Maps (themes)
+* Purchase via coins or money
+
+---
+
+# 📊 RANKING
+
+* ELO system
+* Leaderboard
+* Profile stats
+
+---
+
+# 🎨 UI REQUIREMENTS
+
+## Lobby Improvements (MANDATORY):
+
+* Large “Quick Match” button (center)
+* Friends list panel (right side)
+* Invite button near each friend
+* Live stats:
+
+  * players online
+  * matches happening
+
+---
+
+## Game Screen Improvements:
+
+* Strong “YOUR TURN” indicator (animated)
+* Turn timer
+* Ability cooldown indicators
+* Smooth transitions
+
+---
+
+## Store UI:
+
+* Card layout
+* Preview before purchase
+* Clear pricing
+
+---
+
+# 🧠 GAME ENGINE
+
+Separate module:
+
+* validateMove()
+* getValidMoves()
+* applyAbility()
+* checkWin()
+
+---
+
+# 🔔 NOTIFICATIONS
+
+* Friend requests
+* Match invites
+* Game results
+
+---
+
+# 🔍 UX OPTIMIZATION TASK (VERY IMPORTANT)
+
+For each page:
+
+* Reduce number of clicks to start game
+* Ensure user understands next action in < 3 seconds
+* Avoid clutter
+* Highlight primary actions
+
+Also:
+
+* Suggest improvements for:
+
+  * onboarding
+  * retention
+  * engagement loops
+
+---
+
+# 📁 STRUCTURE
+
+frontend/
+backend/
+
+Modular and scalable.
+
+---
+
+# 🔌 APIs
+
+* auth
+* user search
+* friends
+* wallet
+* store
+* match
+
+---
+
+# 📦 OUTPUT
+
+1. Full backend code
+2. Full frontend code
+3. 3D implementation
+4. Game engine
+5. UX improvement notes
+6. Setup guide
+
+---
+
+# 🎯 FINAL GOAL
+
+User can:
+
+* Register
+* Add friends
+* Invite to match
+* Play 3D game
+* Use abilities
+* Earn coins
+* Buy skins/maps
+* Recharge wallet
+
+---
+
+# ⚠️ FINAL RULE
+
+Do NOT just generate code.
+
+Also:
+
+* Improve product design
+* Suggest better UX
+* Reduce friction
+* Make system scalable
