@@ -102,6 +102,7 @@ COPY backend/ ./
 
 # Copy nginx config with backend upstream
 COPY nginx.conf /etc/nginx/nginx.conf
+RUN sed -i 's/server backend:10000;/server 127.0.0.1:10000;/' /etc/nginx/nginx.conf
 
 # Copy entrypoint
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
