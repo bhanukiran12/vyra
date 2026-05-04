@@ -37,12 +37,20 @@ app.include_router(wallet_router)
 app.include_router(store_router)
 app.include_router(matchmaking_router)
 
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+STATIC_DIR = ROOT_DIR / "static"
+
+if STATIC_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
 
 
-@app.get("/{path:path}")
-async def serve_frontend(path: str):
-    return FileResponse("static/index.html")
+if STATIC_DIR.exists():
+    @app.get("/{path:path}")
+    async def serve_frontend(path: str):
+        return FileResponse(STATIC_DIR / "index.html")
+else:
+    @app.get("/")
+    async def root_page():
+        return {"message": "Vyra API online"}
 
 
 @app.get("/api/")
