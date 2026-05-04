@@ -122,13 +122,16 @@ CMD /bin/sh -c ' \
     # Start uvicorn in background \
     uvicorn server:app --host 0.0.0.0 --port 10000 & \
     \
-    # Wait for backend to be ready \
-    until curl -sf http://localhost:10000/api/health > /dev/null; do \
-        echo "Waiting for backend..."; \
-        sleep 2; \
-    done; \
+    # Log backend readiness without blocking container startup \
+    ( \
+        until curl -sf http://localhost:10000/api/health > /dev/null; do \
+            echo "Waiting for backend..."; \
+            sleep 2; \
+        done; \
+        echo "Backend is ready." \
+    ) & \
     \
-    # Start nginx in foreground \
+    # Start nginx in foreground immediately so the container is reachable \
     echo "Starting nginx..."; \
     nginx -g "daemon off;" \
 '
