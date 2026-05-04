@@ -5,7 +5,7 @@ import { useGameStore } from "../store/gameStore";
 import { useAuth } from "../auth/AuthContext";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import Board from "../components/game/Board";
+import Board3D from "../components/game/Board3D";
 import StatsPanel from "../components/game/StatsPanel";
 import AbilityPanel from "../components/game/AbilityPanel";
 import EventLog from "../components/game/EventLog";
@@ -339,16 +339,9 @@ export default function GameRoom() {
 
         {/* Center board */}
         <div className="lg:col-span-6">
-          <Board
-            nodes={boardMeta.nodes}
-            adjacency={boardMeta.adjacency}
-            state={state}
-            yourSide={yourSide}
-            onNodeClick={handleNodeClick}
-            pendingAbility={pendingAbility}
-            abilitySelection={abilityPicks}
-            validDestinations={validDests}
-          />
+          <div style={{ height: '600px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #2a2a2a' }}>
+            <Board3D boardMeta={boardMeta} interactive={true} onNodeClick={handleNodeClick} />
+          </div>
           <div className="mt-3 flex items-center justify-between text-xs text-neutral-500">
             <div>
               {state.phase === "placement" && yourSide === "goat" && state.turn === "goat" && (

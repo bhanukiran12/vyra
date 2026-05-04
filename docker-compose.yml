@@ -1,0 +1,127 @@
+#########################################
+# Vyra - Docker Compose (Development)
+#########################################
+# Run: docker compose up --build
+# Stop: docker compose down
+
+version: "3.8"
+
+services:
+  # =============================================
+  # MongoDB Database
+  # =============================================
+  mongo:
+    image: mongo:7.0
+    container_name: vyra-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: vyra
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+    ports:
+      - "27017:27017"
+    networks:
+      - vyra-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/vyra --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  # =============================================
+  # Backend API (FastAPI)
+  # =============================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    container_name: vyra-backend
+    restart: unless-stopped
+    environment:
+      MONGO_URL: mongodb://root:example@mongo:27017/vyra?authSource=admin
+      DB_NAME: vyra
+      JWT_SECRET: dev-jwt-secret-key-change-in-production-minimum-32-chars!!
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:8000,http://0.0.0.0:10000
+      PORT: 10000
+      LOG_LEVEL: INFO
+      ENABLE_HEALTH_CHECK: "true"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "10000:10000"
+    networks:
+      - vyra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # =============================================
+  # Frontend (Development)
+  # =============================================
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile
+      target: frontend
+    container_name: vyra-frontend-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      REACT_APP_BACKEND_URL: http://localhost:10000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+    networks:
+      - vyra-network
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # =============================================
+  # Nginx Reverse Proxy (for WebSocket support)
+  # =============================================
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: vyra-nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    networks:
+      - vyra-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  vyra-network:
+    driver: bridge
+    name: vyra_network
+
+volumes:
+  mongo_data:
+    driver: local
+    name: vyra_mongo_data

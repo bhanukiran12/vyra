@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Swords, Shield, Zap, Flame, ArrowRight } from "lucide-react";
+import Board3DShowcase from "../components/Board3DShowcase";
 
 export default function Landing() {
   return (
@@ -137,6 +138,20 @@ export default function Landing() {
               </svg>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* 3D Board Showcase */}
+      <section className="mx-auto max-w-7xl px-6 py-16">
+        <div className="overline mb-4">· the arena ·</div>
+        <h2 className="font-head text-4xl font-bold tracking-tight md:text-5xl mb-4">
+          The 23-Node Battleground
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm text-neutral-400 mb-8">
+          Navigate triangular geometry where position is power. Every node connects to 2-6 neighbors — there's nowhere to hide.
+        </p>
+        <div className="vyra-card relative h-[600px] overflow-hidden p-6">
+          <Board3DShowcase />
         </div>
       </section>
 

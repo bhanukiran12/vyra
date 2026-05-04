@@ -1,0 +1,140 @@
+#########################################
+# Vyra - Docker Compose (Production)
+#########################################
+# Run: docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+# Stop: docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+
+version: "3.8"
+
+services:
+  # =============================================
+  # MongoDB Database (Production)
+  # =============================================
+  mongo:
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-change-me}
+      MONGO_INITDB_DATABASE: ${DB_NAME:-vyra}
+    volumes:
+      - mongo_data:/data/db
+    # Do NOT expose ports to host in production
+    networks:
+      - vyra-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/$${MONGO_INITDB_DATABASE:-vyra} --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # =============================================
+  # Backend API (FastAPI - Production)
+  # =============================================
+  backend:
+    restart: unless-stopped
+    environment:
+      MONGO_URL: mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-change-me}@mongo:27017/${DB_NAME:-vyra}?authSource=admin
+      DB_NAME: ${DB_NAME:-vyra}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://vyra.yourdomain.com}
+      PORT: 10000
+      LOG_LEVEL: ${LOG_LEVEL:-WARNING}
+      ENABLE_HEALTH_CHECK: "true"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - vyra-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+        reservations:
+          memory: 1G
+          cpus: "0.5"
+      replicas: 2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # =============================================
+  # Nginx Reverse Proxy (Production)
+  # =============================================
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    networks:
+      - vyra-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  vyra-network:
+    driver: bridge
+    name: vyra_network_prod
+    attachable: true
+
+volumes:
+  mongo_data:
+    driver: local
+    name: vyra_mongo_data_prod
+
+# =============================================
+# Production Deployment Instructions:
+# =============================================
+# 
+# 1. Create .env.prod file:
+#    MONGO_ROOT_USER=admin
+#    MONGO_ROOT_PASSWORD=your-secure-password
+#    DB_NAME=vyra
+#    JWT_SECRET=your-super-secret-jwt-key-32-chars+
+#    CORS_ORIGINS=https://vyra.yourdomain.com
+#    LOG_LEVEL=WARNING
+#
+# 2. Generate SSL certificates:
+#    mkdir -p ssl
+#    # Use Let's Encrypt certbot or upload your certificates
+#    cp fullchain.pem ssl/
+#    cp privkey.pem ssl/
+#
+# 3. Deploy:
+#    docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+#
+# 4. Scale backend (if needed):
+#    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --scale backend=3
+#
+# Note: MongoDB should be run as a separate service (not in this compose)
+# for production with replica sets and backups.

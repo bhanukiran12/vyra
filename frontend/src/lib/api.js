@@ -39,6 +39,20 @@ export function formatApiError(err) {
 
 export function wsUrl(code) {
   const token = localStorage.getItem("vyra_token") || "";
+  
+  // If backend URL is relative (empty or same origin), use relative WebSocket URL
+  // This ensures WebSocket connections work when frontend and backend share the same origin
+  if (!BACKEND_URL || BACKEND_URL === "/" || BACKEND_URL === window.location.origin) {
+    const url = new URL(window.location.href);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    url.pathname = `/api/ws/${code}`;
+    url.search = "";
+    url.searchParams.set("token", token);
+    url.hash = "";
+    return url.toString();
+  }
+  
+  // Otherwise, construct WebSocket URL from explicit backend URL
   const url = new URL(BACKEND_URL);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   url.pathname = `/api/ws/${code}`;

@@ -1,0 +1,211 @@
+#########################################
+# Vyra - Render.com Deployment Configuration
+#########################################
+# Save as: render.yaml
+# 
+# Deploy to Render: https://render.com
+# Docs: https://render.com/docs/yaml-spec
+# =============================================
+
+services:
+  # =============================================
+  # Backend Web Service (FastAPI)
+  # =============================================
+  - type: web
+    name: vyra-backend
+    env: python
+    plan: free
+    # plan: starter  # Upgrade for WebSocket reliability
+    
+    # Build configuration
+    buildCommand: >-
+      pip install --no-cache-dir -r backend/requirements.txt
+    
+    # Start command - uvicorn production server
+    startCommand: >-
+      uvicorn server:app \
+        --host 0.0.0.0 \
+        --port $PORT \
+        --workers 1 \
+        --log-level warning
+    
+    # Runtime environment variables
+    envVars:
+      - key: MONGO_URL
+        # For Render MongoDB, use the auto-injected env vars
+        fromDatabase:
+          name: vyra-database
+          property: connectionString
+      - key: DB_NAME
+        value: vyra
+      - key: JWT_SECRET
+        # Set this in Render dashboard: Settings -> Environment
+        sync: false
+      - key: CORS_ORIGINS
+        # Fixed to match actual frontend domain on Render
+        value: "*"
+      - key: PORT
+        fromRegion: true
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ENABLE_HEALTH_CHECK
+        value: "true"
+    
+    # Auto-deploy on push to main branch
+    autoDeploy: true
+    
+    # Health check path (Render requirement)
+    healthCheckPath: /api/health
+    
+    # Timeout settings (important for WebSocket connections)
+    timeout: 600
+    
+    # Minimum instance size for WebSocket support
+    # Free tier may drop WebSocket connections after 15 min idle
+    # Consider upgrading to Starter ($7/mo) for persistent WebSockets
+    minInstances: 1
+    maxInstances: 10
+    
+    # Auto-rollback on failed deploy
+    autoRollback: true
+
+  # =============================================
+  # MongoDB Database (Managed)
+  # =============================================
+  # Create via Render Dashboard:
+  # 1. Go to https://dashboard.render.com/New -> Database
+  # 2. Select MongoDB
+  # 3. Name: vyra-database
+  # 4. Plan: $0 (Sandbox) or higher for production
+  #
+  # The database will inject these env vars:
+  # - MONGO_DATABASE_TEST_CONNECTION_STRING
+  # - MONGO_CONNECTION_STRING
+  # - MONGO_HOST
+  # - MONGO_PORT
+  # - MONGO_USER
+  # - MONGO_URL
+  # - MONGO_DATABASE_NAME
+
+  # =============================================
+  # Frontend Static Site (React)
+  # =============================================
+  - type: web
+    name: vyra-frontend
+    env: static
+    plan: free
+    
+    # Build configuration
+    buildCommand: >-
+      cd frontend &&
+      yarn install --frozen-lockfile &&
+      yarn build
+    
+    # Publish directory (Vite build output)
+    publishDir: frontend/build
+    
+    # Environment variables for frontend
+    envVars:
+      - key: REACT_APP_BACKEND_URL
+        # Use relative path to share domain with backend
+        # Both services will be under render.com subdomain
+        # Or use custom domain with proxy rules
+        value: ""
+      - key: NODE_ENV
+        value: production
+    
+    # Auto-deploy on push to main branch
+    autoDeploy: true
+    
+    # Health check
+    healthCheckPath: /
+    
+    # Auto-rollback on failed deploy
+    autoRollback: true
+
+# =============================================
+# Alternative: Single Docker Deployment
+# =============================================
+# For better WebSocket support, deploy the Dockerfile
+# which bundles frontend and backend together:
+
+#  - type: web
+#    name: vyra-app
+#    env: docker
+#    plan: starter  # Required for WebSocket support
+#    
+#    dockerfilePath: Dockerfile
+#    
+#    envVars:
+#      - key: MONGO_URL
+#        fromDatabase:
+#          name: vyra-database
+#          property: connectionString
+#      - key: DB_NAME
+#        value: vyra
+#      - key: JWT_SECRET
+#        sync: false
+#      - key: CORS_ORIGINS
+#        value: *
+#      - key: PORT
+#        fromRegion: true
+#      - key: LOG_LEVEL
+#        value: INFO
+#    
+#    healthCheckPath: /api/health
+#    autoDeploy: true
+
+# =============================================
+# Important Render Notes for WebSocket Support:
+# =============================================
+# 
+# 1. FREE TIER LIMITATIONS:
+#    - WebSocket connections are killed after 15 minutes of inactivity
+#    - Consider Starter plan ($7/mo) for persistent WebSocket connections
+#    - Free tier is OK for testing but not production
+#
+# 2. WEB SOCKET REQUIREMENTS:
+#    - Render automatically handles WebSocket upgrade requests
+#    - No special configuration needed in render.yaml
+#    - Ensure your app responds to HTTP health checks
+#    - Upgrade request headers must be forwarded correctly
+#
+# 3. DOMAIN CONFIGURATION:
+#    - Both frontend and backend get *.onrender.com subdomains
+#    - For WebSocket connections, use relative path (same origin)
+#    - Or configure CORS_ORIGINS with your frontend domain
+#
+# 4. DATABASE:
+#    - Create MongoDB database separately in Render
+#    - It will auto-inject MONGO_URL into the backend service
+#    - Backups available on paid plans
+#
+# 5. SCALING:
+#    - WebSocket connections are pinned to specific instances
+#    - Use Redis for session management if scaling horizontally
+#    - Add Redis add-on from Render marketplace if needed
+#
+# 6. MONITORING:
+#    - Check logs: https://dashboard.render.com/[service]/logs
+#    - Monitor metrics: https://dashboard.render.com/[service]/metrics
+#    - Set up alerts for failed health checks
+#
+# 7. CUSTOM DOMAIN:
+#    - Add custom domain in Render dashboard
+#    - Update CORS_ORIGINS environment variable
+#    - Update REACT_APP_BACKEND_URL if using separate domains
+#
+# 8. TESTING BEFORE DEPLOY:
+#    - Run: docker compose up --build
+#    - Test WebSocket: Connect via browser to localhost:3000
+#    - Verify health: curl http://localhost:10000/api/health
+#
+# Quick Deploy Commands:
+#
+# 1. Sign up at https://render.com
+# 2. Create new Web Service
+# 3. Connect GitHub repository
+# 4. Set build command: pip install -r backend/requirements.txt
+# 5. Set start command: uvicorn server:app --host 0.0.0.0 --port $PORT
+# 6. Set environment variables (JWT_SECRET, etc.)
+# 7. Deploy!

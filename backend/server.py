@@ -66,6 +66,31 @@ async def wallet_webhook_route(request: Request):
 
 @app.websocket("/api/ws/{code}")
 async def websocket_endpoint(websocket: WebSocket, code: str):
+    # Validate origin for production WebSocket connections
+    # This is checked before accept() to prevent potential abuse
+    origin = websocket.headers.get("origin")
+    allowed_origins = os.environ.get("CORS_ORIGINS", "*").split(",")
+    
+    # Only validate origin if we have explicit allowed origins (not wildcard)
+    if origin and "*" not in allowed_origins:
+        # Extract base origin without trailing slash
+        origin_base = origin.rstrip("/")
+        allowed = False
+        for allowed_origin in allowed_origins:
+            allowed_origin = allowed_origin.strip().rstrip("/")
+            if origin_base == allowed_origin or allowed_origin == "*":
+                allowed = True
+                break
+        if not allowed:
+            # Log rejected WebSocket connection attempt
+            logger = logging.getLogger("vyra.websocket")
+            logger.warning(
+                f"WebSocket connection rejected - origin: {origin}, code: {code}, "
+                f"allowed_origins: {allowed_origins}"
+            )
+            await websocket.close(code=4403, reason="Origin not allowed")
+            return
+    
     token = websocket.query_params.get("token") or ""
     await handle_socket(websocket, code, token)
 
