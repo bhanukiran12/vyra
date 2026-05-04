@@ -107,10 +107,8 @@ services:
     # Environment variables for frontend
     envVars:
       - key: REACT_APP_BACKEND_URL
-        # Use relative path to share domain with backend
-        # Both services will be under render.com subdomain
-        # Or use custom domain with proxy rules
-        value: ""
+        # Point the frontend at the backend service for API + WebSocket calls.
+        value: https://vyra-backend.onrender.com
       - key: NODE_ENV
         value: production
     
