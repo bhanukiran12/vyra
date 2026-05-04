@@ -1,8 +1,21 @@
 import axios from "axios";
 
-const BACKEND_URL =
-  process.env.REACT_APP_BACKEND_URL ||
-  (typeof window !== "undefined" ? window.location.origin : "");
+function resolveBackendUrl() {
+  const configured = process.env.REACT_APP_BACKEND_URL;
+  if (configured) return configured;
+
+  if (typeof window === "undefined") return "";
+
+  // Render static sites often need to talk to a separate backend service.
+  // Fall back to the backend service host when no explicit env var is present.
+  if (window.location.hostname.endsWith(".onrender.com")) {
+    return "https://vyra-backend.onrender.com";
+  }
+
+  return window.location.origin;
+}
+
+const BACKEND_URL = resolveBackendUrl();
 export const API_BASE = `${BACKEND_URL}/api`;
 
 export const api = axios.create({
@@ -39,9 +52,9 @@ export function formatApiError(err) {
 
 export function wsUrl(code) {
   const token = localStorage.getItem("vyra_token") || "";
-  
-  // If backend URL is relative (empty or same origin), use relative WebSocket URL
-  // This ensures WebSocket connections work when frontend and backend share the same origin
+
+  // If backend URL is relative or same-origin, use the current page origin.
+  // Otherwise, build the websocket URL directly from the configured backend host.
   if (!BACKEND_URL || BACKEND_URL === "/" || BACKEND_URL === window.location.origin) {
     const url = new URL(window.location.href);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
