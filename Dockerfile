@@ -100,6 +100,10 @@ RUN pip install --break-system-packages --no-cache-dir -r requirements.txt
 # Copy backend source
 COPY backend/ ./
 
+# Also expose the frontend build to the backend app so the API process can
+# serve the SPA if the platform routes traffic directly to PORT 10000.
+COPY --from=frontend /app/frontend/build ./static
+
 # Copy nginx config with backend upstream
 COPY nginx.allinone.conf /etc/nginx/nginx.conf
 
