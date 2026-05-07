@@ -9,7 +9,7 @@ function resolveBackendUrl() {
   // Render static sites often need to talk to a separate backend service.
   // Fall back to the backend service host when no explicit env var is present.
   if (window.location.hostname.endsWith(".onrender.com")) {
-    return "https://vyra-backend.onrender.com";
+    return "https://vyra-ues5.onrender.com";
   }
 
   return window.location.origin;
